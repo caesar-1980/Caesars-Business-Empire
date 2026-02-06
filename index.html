@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Caesar's Online Business Empire</title>
+<style>
+
+/* Mobile first adjustments */
+@media(max-width:600px){
+    .gallery {
+        grid-template-columns: 1fr; /* single column */
+        gap: 10px;
+        padding: 10px;
+    }
+    .card img {
+        max-height: 200px;
+    }
+    .btn {
+        width: 90%;
+        font-size: 1em;
+        padding: 10px;
+    }
+    #searchBar {
+        width: 95%;
+    }
+    .categories {
+        flex-direction: column;
+        align-items: center;
+    }
+    .category-btn {
+        width: 90%;
+        margin: 5px 0;
+    }
+}
+
+body { font-family: 'Arial', sans-serif; background: #f2f2f2; margin:0; padding:0;}
+header { background: #25D366; color: white; padding: 15px; text-align: center; font-size: 1.8em; font-weight: bold;}
+h2 { margin: 20px 0 10px; text-align: center;}
+#searchBar { display: block; margin: 10px auto 20px auto; padding: 10px; width: 80%; max-width: 400px; border-radius: 6px; border: 1px solid #ccc; font-size: 1em;}
+.categories { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;}
+.category-btn { padding: 8px 15px; border: none; border-radius: 5px; background: #007bff; color: white; cursor: pointer; font-weight: bold;}
+.category-btn.active { background: #0056b3;}
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 15px; padding: 10px 20px 30px 20px;}
+.card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 10px; text-align: center; transition: transform 0.2s; position:relative;}
+.card:hover { transform: translateY(-5px);}
+.card img { width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; cursor: pointer; transition: transform 0.3s;}
+.card img:hover { transform: scale(1.05);}
+.model { font-style: italic; color: #555; margin: 5px 0;}
+.price { font-weight: bold; color: green; margin: 5px 0;}
+.btn { display: block; margin: 5px auto; padding: 8px 10px; border-radius: 6px; text-decoration: none; color: white; font-weight: bold; background: green; width: 80%; text-align: center;}
+.btn.share { background: #25D366;}
+.edit-btn { background: orange; margin-top: 5px; }
+.delete-btn { background: red; margin-top: 5px; }
+.modal { display: none; position: fixed; z-index: 999; padding-top: 60px; left:0; top:0; width:100%; height:100%; overflow:auto; background-color: rgba(0,0,0,0.8);}
+.modal-content { margin:auto; display:block; max-width:90%; max-height:80%; border-radius:10px;}
+.modal-close { position:absolute; top:25px; right:35px; color:white; font-size:40px; font-weight:bold; cursor:pointer;}
+#adminForm, #adminSettings { max-width: 400px; margin: 20px auto; background: #fff; padding: 15px; border-radius:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display:none;}
+#adminForm input, #adminSettings input { width: 100%; margin:5px 0; padding:8px; border-radius:5px; border:1px solid #ccc;}
+#adminForm button, #adminSettings button { background: #007bff; color:white; border:none; padding:10px; width:100%; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:5px;}
+#adminToggle { max-width: 400px; margin: 20px auto; text-align:center; }
+#adminToggle input { padding:8px; width:60%; border-radius:5px; border:1px solid #ccc; margin-right:5px;}
+#adminToggle button { padding:8px 12px; border-radius:5px; background:#007bff; color:white; border:none; font-weight:bold; cursor:pointer;}
+@media(max-width:500px){.btn{width:90%;}}
+</style>
+</head>
+<body>
+
+<header>Caesar's Online Business Empire</header>
+<h1><center>Online Items Gallery</center></h1>
+<h2>Available Items</h2>
+
+<input type="text" id="searchBar" placeholder="Search by name, model, or category">
+
+<div class="categories" id="categories"></div>
+<div class="gallery" id="gallery"></div>
+
+<!-- Image Zoom Modal -->
+<div id="imgModal" class="modal">
+    <span class="modal-close">&times;</span>
+    <img class="modal-content" id="modalImage">
+</div>
+
+<!-- Admin Login Toggle -->
+<div id="adminToggle">
+    <input type="text" id="adminName" placeholder="Admin Username">
+    <input type="password" id="adminPassword" placeholder="Admin Password">
+    <button id="unlockAdminBtn">Unlock Admin</button>
+</div>
+
+<!-- Admin Form to add/edit items -->
+<div id="adminForm">
+    <h3>Add / Edit Item</h3>
+    <input type="hidden" id="itemIndex">
+    <input type="text" id="itemName" placeholder="Item Name" required>
+    <input type="text" id="itemModel" placeholder="Model" required>
+    <input type="text" id="itemPrice" placeholder="Price" required>
+    <input type="text" id="itemImage" placeholder="Image URL or path" required>
+    <input type="text" id="itemCategory" placeholder="Category" required>
+    <button id="addItemBtn">Add Item</button>
+    <button id="updateItemBtn" style="display:none;">Update Item</button>
+</div>
+
+<!-- Admin Settings -->
+<div id="adminSettings">
+    <h3>Admin Settings</h3>
+    <input type="text" id="newAdminName" placeholder="New Admin Username">
+    <input type="password" id="newAdminPass" placeholder="New Admin Password">
+    <button id="addAdminBtn">Add Admin</button>
+    <h4>Change My Password</h4>
+    <input type="password" id="changePassOld" placeholder="Old Password">
+    <input type="password" id="changePassNew" placeholder="New Password">
+    <button id="changePassBtn">Change Password</button>
+</div>
+
+<script>
+let whatsappNumber = "233592496100";
+
+let items = [
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 8165", price:"Ghc530", image:"assets/images/probarber.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 8193", price:"Ghc650", image:"assets/images/1095.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 8195", price:"Ghc650", image:"assets/images/1096.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 1103", price:"Ghc480", image:"assets/images/1096B.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 1103", price:"Ghc480", image:"assets/images/1103.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 1103", price:"Ghc480", image:"assets/images/8165B.jpg"},
+    {category:"Clippers", name:"CORDLESS HAIR CLIPPER PRO", model:"iPRO - 1103", price:"Ghc480", image:"assets/images/c02.jpg"},
+     {category:"Laptop", name:"LAPTOPS", model:"DELL - LATITUDE | E6410", price:"Ghc3800.00", image:"assets/images/"},
+    {category:"Neck Ruffles", name:"NECK RUFFLES", model:"White", price:"Ghc45.00", image:"assets/images/neckruffwhite.jpg"},
+    {category:"Neck Ruffles", name:"NECK RUFFLES", model:"White", price:"Ghc55.00", image:"assets/images/neckruffblack.jpg"},
+    {category:"Neck Ruffles", name:"NECK RUFFLES", model:"White", price:"Ghc45.00", image:"assets/images/neckruffpink.jpg"},
+    {category:"Hair Dye", name:"COLORANT", model:"White", price:"Ghc45.00", image:"assets/images/colorant1.jpg"},
+    {category:"Mobile Phones", name:"MOBILE PHONES", model:"Infinix Hot 40i", price:"GhGhc1250.00", image:"https://via.placeholder.com/220x150?text=Oil"},
+    {category:"Appliances", name:"TELEVISION", model:"ASANO - 32Inches", price:"GhGhc2050.00", image:"https://via.placeholder.com/220x150?text=Sugar"},
+    {category:"Electronics", name:"Wireless Earbuds", model:"AirPro - X1", price:"Ghc450", image:"https://via.placeholder.com/220x150?text=Earbuds"},
+    {category:"Electronics", name:"Portable Speaker", model:"SoundMax - S5", price:"Ghc380", image:"https://via.placeholder.com/220x150?text=Speaker"},
+    {category:"Accessories", name:"Smart Watch", model:"TimeX - 300", price:"Ghc550", image:"https://via.placeholder.com/220x150?text=Smart+Watch"},
+    {category:"Accessories", name:"Leather Wallet", model:"LuxPro - L1", price:"Ghc120", image:"https://via.placeholder.com/220x150?text=Wallet"},
+    {category:"Clothing", name:"Men's T-Shirt", model:"CottonMax - M100", price:"Ghc90", image:"https://via.placeholder.com/220x150?text=T-Shirt"},
+    {category:"Clothing", name:"Women's Dress", model:"Eleganza - D50", price:"Ghc180", image:"https://via.placeholder.com/220x150?text=Dress"}
+];
+
+let admins = [{username:"admin", password:"admin123"}];
+let currentAdmin = null;
+
+const gallery = document.getElementById("gallery");
+const categoriesDiv = document.getElementById("categories");
+const searchBar = document.getElementById("searchBar");
+const adminForm = document.getElementById("adminForm");
+const adminSettings = document.getElementById("adminSettings");
+
+function generateCategories() {
+    categoriesDiv.innerHTML = "";
+    const uniqueCats = [...new Set(items.map(i=>i.category))];
+    uniqueCats.unshift("All");
+    uniqueCats.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.classList.add("category-btn");
+        if(cat==="All") btn.classList.add("active");
+        btn.innerText = cat;
+        btn.addEventListener("click", ()=> filterCategory(cat, btn));
+        categoriesDiv.appendChild(btn);
+    });
+}
+
+function filterCategory(cat, btn){
+    document.querySelectorAll(".category-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const filtered = cat==="All" ? items : items.filter(i=>i.category===cat);
+    generateGallery(filtered);
+}
+
+function generateGallery(array){
+    gallery.innerHTML = "";
+    array.forEach((item,index)=>{
+        const card = document.createElement("div");
+        card.classList.add("card");
+        let adminButtons = "";
+        if(currentAdmin){
+            adminButtons = `<button class="btn edit-btn">Edit</button><button class="btn delete-btn">Delete</button>`;
+        }
+        card.innerHTML = `
+            <img src="${item.image}" alt="${item.name}" class="item-image">
+            <h3>${item.name}</h3>
+            <p class="model">${item.model}</p>
+            <p class="price">${item.price}</p>
+            <a href="${item.image}" download class="btn">Download</a>
+            <a href="https://wa.me/${whatsappNumber}?text=${encodeURIComponent("I want to buy "+item.name+" ("+item.model+") for "+item.price)}"
+               class="btn share" target="_blank">Order on WhatsApp</a>
+            ${adminButtons}
+        `;
+        gallery.appendChild(card);
+
+        card.querySelectorAll(".item-image").forEach(img=>{
+            img.addEventListener("click", ()=>{
+                const modal = document.getElementById("imgModal");
+                const modalImg = document.getElementById("modalImage");
+                modal.style.display = "block";
+                modalImg.src = img.src;
+            });
+        });
+
+        if(currentAdmin){
+            card.querySelector(".delete-btn").addEventListener("click", ()=>{
+                if(confirm("Delete this item?")){
+                    items.splice(index,1);
+                    generateCategories();
+                    generateGallery(items);
+                }
+            });
+            card.querySelector(".edit-btn").addEventListener("click", ()=>{
+                document.getElementById("itemIndex").value = index;
+                document.getElementById("itemName").value = item.name;
+                document.getElementById("itemModel").value = item.model;
+                document.getElementById("itemPrice").value = item.price;
+                document.getElementById("itemImage").value = item.image;
+                document.getElementById("itemCategory").value = item.category;
+                document.getElementById("addItemBtn").style.display="none";
+                document.getElementById("updateItemBtn").style.display="block";
+                adminForm.style.display="block";
+            });
+        }
+    });
+}
+
+searchBar.addEventListener("input", ()=>{
+    const query = searchBar.value.toLowerCase();
+    const filtered = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.model.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+    );
+    generateGallery(filtered);
+});
+
+document.querySelector(".modal-close").addEventListener("click", ()=> document.getElementById("imgModal").style.display="none");
+document.getElementById("imgModal").addEventListener("click", e=>{
+    if(e.target.id==="imgModal") e.target.style.display="none";
+});
+
+// Admin login
+document.getElementById("unlockAdminBtn").addEventListener("click", ()=>{
+    const name = document.getElementById("adminName").value.trim();
+    const pass = document.getElementById("adminPassword").value;
+    const found = admins.find(a=>a.username===name && a.password===pass);
+    if(found){
+        currentAdmin = found;
+        adminForm.style.display="block";
+        adminSettings.style.display="block";
+        document.getElementById("adminToggle").style.display="none";
+        generateGallery(items);
+    } else {
+        alert("Invalid admin credentials");
+    }
+});
+
+// Add / Update Item
+document.getElementById("addItemBtn").addEventListener("click", ()=>{
+    const name = document.getElementById("itemName").value.trim();
+    const model = document.getElementById("itemModel").value.trim();
+    const price = document.getElementById("itemPrice").value.trim();
+    const image = document.getElementById("itemImage").value.trim();
+    const category = document.getElementById("itemCategory").value.trim();
+    if(name && model && price && image && category){
+        items.push({name, model, price, image, category});
+        generateCategories();
+        generateGallery(items);
+        document.getElementById("itemName").value="";
+        document.getElementById("itemModel").value="";
+        document.getElementById("itemPrice").value="";
+        document.getElementById("itemImage").value="";
+        document.getElementById("itemCategory").value="";
+    } else alert("Fill all fields");
+});
+
+document.getElementById("updateItemBtn").addEventListener("click", ()=>{
+    const index = document.getElementById("itemIndex").value;
+    items[index].name = document.getElementById("itemName").value.trim();
+    items[index].model = document.getElementById("itemModel").value.trim();
+    items[index].price = document.getElementById("itemPrice").value.trim();
+    items[index].image = document.getElementById("itemImage").value.trim();
+    items[index].category = document.getElementById("itemCategory").value.trim();
+    generateCategories();
+    generateGallery(items);
+    document.getElementById("addItemBtn").style.display="block";
+    document.getElementById("updateItemBtn").style.display="none";
+    document.getElementById("itemName").value="";
+    document.getElementById("itemModel").value="";
+    document.getElementById("itemPrice").value="";
+    document.getElementById("itemImage").value="";
+    document.getElementById("itemCategory").value="";
+});
+
+// Admin Settings
+document.getElementById("addAdminBtn").addEventListener("click", ()=>{
+    const newName = document.getElementById("newAdminName").value.trim();
+    const newPass = document.getElementById("newAdminPass").value.trim();
+    if(newName && newPass){
+        admins.push({username:newName,password:newPass});
+        alert("New admin added");
+        document.getElementById("newAdminName").value="";
+        document.getElementById("newAdminPass").value="";
+    }
+});
+
+document.getElementById("changePassBtn").addEventListener("click", ()=>{
+    const oldPass = document.getElementById("changePassOld").value;
+    const newPass = document.getElementById("changePassNew").value;
+    if(oldPass === currentAdmin.password){
+        currentAdmin.password = newPass;
+        alert("Password changed successfully");
+        document.getElementById("changePassOld").value="";
+        document.getElementById("changePassNew").value="";
+    } else alert("Old password incorrect");
+});
+
+generateCategories();
+generateGallery(items);
+</script>
+</body>
+</html>
